@@ -1,3 +1,4 @@
+![DoseDesk](dosedesk-A-record.svg)
 # DoseDesk
 
 **A medication calculator you can hand to a surveyor — and a tutor that never guesses.**
