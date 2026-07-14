@@ -1,0 +1,106 @@
+{
+  "_meta": {
+    "generated_from": "python engine of record",
+    "engine_version": "0.1.0",
+    "note": "The browser JS engine must reproduce every exact_value and result_value below. Parity is proven, not asserted."
+  },
+  "vectors": [
+    {
+      "calc": "solid_liquid_dose",
+      "args": [
+        750,
+        250,
+        "tab",
+        "half_tab"
+      ],
+      "exact_value": "3",
+      "result_value": 3.0,
+      "result_unit": "tab"
+    },
+    {
+      "calc": "infusion_rate",
+      "args": [
+        62,
+        5,
+        "mcg/kg/min",
+        400,
+        "mg",
+        250
+      ],
+      "exact_value": "93/8",
+      "result_value": 11.6,
+      "result_unit": "mL/hr"
+    },
+    {
+      "calc": "dose_from_rate",
+      "args": [
+        62,
+        11.625,
+        400,
+        "mg",
+        250,
+        "mcg/kg/min",
+        "none"
+      ],
+      "exact_value": "5",
+      "result_value": 5.0,
+      "result_unit": "mcg/kg/min"
+    },
+    {
+      "calc": "reconstitution",
+      "args": [
+        1,
+        "g",
+        10,
+        400,
+        "mg"
+      ],
+      "exact_value": "4",
+      "result_value": 4.0,
+      "result_unit": "mL"
+    },
+    {
+      "calc": "drip_rate",
+      "args": [
+        1000,
+        8,
+        "hr",
+        15
+      ],
+      "exact_value": "125/4",
+      "result_value": 31.0,
+      "result_unit": "gtt/min"
+    },
+    {
+      "calc": "percent_to_mg_ml",
+      "args": [
+        2
+      ],
+      "exact_value": "20",
+      "result_value": 20.0,
+      "result_unit": "mg/mL"
+    },
+    {
+      "calc": "ratio_to_mg_ml",
+      "args": [
+        1,
+        1000
+      ],
+      "exact_value": "1",
+      "result_value": 1.0,
+      "result_unit": "mg/mL"
+    },
+    {
+      "calc": "crcl_cockcroft_gault",
+      "args": [
+        70,
+        70,
+        1.0,
+        false
+      ],
+      "exact_value": "1225/18",
+      "result_value": 68.0,
+      "result_unit": "mL/min"
+    }
+  ]
+}

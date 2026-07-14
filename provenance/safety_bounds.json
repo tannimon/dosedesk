@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "schema": "dosedesk.safety_bounds.v1",
+    "purpose": "Curated, structured dose ceilings and high-alert flags for a SMALL set of high-risk drugs. Numeric ceilings are facts drawn from public FDA labeling (openFDA/DailyMed) and are not copyrightable. This file is intentionally short and hand-verified; the long tail is handled by label-text retrieval, not by this file.",
+    "data_version": "2026.07-seed",
+    "sources": ["openFDA drug label API (CC0)", "DailyMed SPL (NLM)"],
+    "disclaimer": "Ceilings are label-derived reference points, not institutional protocol. Verify against current policy and the product label. Not for use as the sole basis of administration."
+  },
+  "high_alert_classes": [
+    "insulin",
+    "heparin and LMWH",
+    "opioids",
+    "concentrated electrolytes (KCl, hypertonic NaCl, magnesium sulfate)",
+    "neuromuscular blocking agents",
+    "chemotherapy / antineoplastics",
+    "vasoactive / inotropic infusions (norepinephrine, epinephrine, dopamine, etc.)",
+    "anticoagulants (warfarin, DOACs)"
+  ],
+  "drugs": {
+    "acetaminophen": {
+      "high_alert": false,
+      "adult_max_single_mg": 1000,
+      "adult_max_daily_mg": 3000,
+      "note": "OTC labeling commonly caps at 3000 mg/day; some inpatient protocols allow 4000 mg/day. Confirm against local policy.",
+      "source": "openFDA/DailyMed label",
+      "source_version": "2026.07-seed"
+    },
+    "heparin": {
+      "high_alert": true,
+      "requires_independent_double_check": true,
+      "note": "Weight-based dosing per institutional nomogram. Do not rely on a generic ceiling; use the ordering protocol.",
+      "source": "openFDA/DailyMed label",
+      "source_version": "2026.07-seed"
+    },
+    "insulin": {
+      "high_alert": true,
+      "requires_independent_double_check": true,
+      "note": "Units only. Never abbreviate 'U'. Verify concentration (U-100 vs U-500) explicitly.",
+      "source": "openFDA/DailyMed label",
+      "source_version": "2026.07-seed"
+    },
+    "potassium chloride": {
+      "high_alert": true,
+      "requires_independent_double_check": true,
+      "peripheral_max_conc_mEq_per_L": 10,
+      "peripheral_max_infusion_mEq_per_hr": 10,
+      "note": "Higher concentrations/rates require central line and monitoring per policy. Never IV push.",
+      "source": "openFDA/DailyMed label + common safety standard",
+      "source_version": "2026.07-seed"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DoseDesk plausibility range record",
+  "description": "A single reference range used ONLY to grade plausibility of a computed dose. It never overrides the deterministic calculation and never asserts a dose is 'wrong' — it produces a graded, confidence-tagged prompt to verify. A range with no source or confidence is invalid by design: provenance is a required field, not an afterthought.",
+  "type": "object",
+  "required": ["id", "drug", "parameter", "range_type", "lower", "upper", "population", "source", "source_version", "confidence"],
+  "properties": {
+    "id": {"type": "string", "description": "stable slug, e.g. dopamine.mcg_kg_min.adult"},
+    "drug": {"type": "string"},
+    "parameter": {"type": "string", "description": "the dosing parameter the range applies to, e.g. mcg/kg/min"},
+    "range_type": {"type": "string", "enum": ["therapeutic_reference", "max_ceiling", "usual_starting", "institutional_range"]},
+    "lower": {"type": "string", "description": "exact decimal as string; empty string if unbounded"},
+    "upper": {"type": "string", "description": "exact decimal as string; empty string if unbounded"},
+    "population": {"type": "string", "enum": ["adult", "pediatric", "neonatal", "geriatric", "all"]},
+    "indication": {"type": "string", "description": "indication this range applies to, if narrow; blank = general"},
+    "route": {"type": "string"},
+    "source": {"type": "string", "description": "e.g. 'DailyMed SPL', 'openFDA label', 'commonly cited educational reference'"},
+    "source_version": {"type": "string", "description": "snapshot date or label version"},
+    "confidence": {
+      "type": "string",
+      "enum": ["source-backed", "label-derived", "institutional-range", "educational-reference", "unknown"],
+      "description": "travels with every warning. A warning without confidence is noise."
+    },
+    "notes": {"type": "string"},
+    "retrieved_date": {"type": "string"}
+  }
+}

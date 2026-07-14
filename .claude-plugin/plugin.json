@@ -1,0 +1,18 @@
+{
+  "name": "dosedesk",
+  "displayName": "DoseDesk",
+  "version": "0.1.1",
+  "description": "A verifiable medication dosage calculator and tutor. A strict verification mode routes every real calculation through a deterministic exact-arithmetic engine that reads inputs back, shows unit cancellation, refuses to infer missing order details, flags error-prone notation and high-alert drugs, and emits a defensible audit record. A separate tutor mode teaches and generates practice. Public-domain drug data only (openFDA/DailyMed/RxNorm). Zero Trust: standard library only, no external dependencies, no data egress.",
+  "author": {
+    "name": "Tanni",
+    "url": "https://github.com/tannimon"
+  },
+  "homepage": "https://github.com/tannimon/dosedesk",
+  "repository": "https://github.com/tannimon/dosedesk",
+  "license": "MIT",
+  "keywords": [
+    "dosage", "medication math", "infusion", "nursing", "pharmacy",
+    "dimensional analysis", "clinical calculator", "NCLEX", "reconstitution",
+    "medication safety", "auditable"
+  ]
+}

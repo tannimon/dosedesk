@@ -1,0 +1,41 @@
+{
+  "_meta": {
+    "schema": "provenance/plausibility_ranges.schema.json",
+    "data_version": "2026.07-seed",
+    "principle": "Absence of a range means UNKNOWN, never NORMAL. Confidence travels with every assessment. These seeds are intentionally few and honestly tagged; they demonstrate the framework, they are not a formulary."
+  },
+  "ranges": [
+    {
+      "id": "dopamine.mcg_kg_min.adult",
+      "drug": "dopamine",
+      "parameter": "mcg/kg/min",
+      "range_type": "therapeutic_reference",
+      "lower": "2",
+      "upper": "20",
+      "population": "adult",
+      "indication": "hemodynamic support",
+      "route": "IV infusion",
+      "source": "commonly cited educational reference range",
+      "source_version": "2026.07-seed",
+      "confidence": "educational-reference",
+      "notes": "Effect is dose-dependent across this window. This is a teaching reference, not a per-label ceiling; verify against institutional pressor protocol.",
+      "retrieved_date": "2026-07"
+    },
+    {
+      "id": "norepinephrine.mcg_min.adult",
+      "drug": "norepinephrine",
+      "parameter": "mcg/min",
+      "range_type": "usual_starting",
+      "lower": "2",
+      "upper": "",
+      "population": "adult",
+      "indication": "vasopressor support",
+      "route": "IV infusion",
+      "source": "commonly cited educational reference range",
+      "source_version": "2026.07-seed",
+      "confidence": "educational-reference",
+      "notes": "Upper bound intentionally left unbounded — titrated to effect; no fixed ceiling asserted.",
+      "retrieved_date": "2026-07"
+    }
+  ]
+}

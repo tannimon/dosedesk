@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "dosedesk-dev",
+  "version": "0.1.1",
+  "description": "DoseDesk marketplace — the auditable medication calculation plugin.",
+  "owner": { "name": "Tanni", "url": "https://github.com/tannimon" },
+  "plugins": [
+    {
+      "name": "dosedesk",
+      "source": "./",
+      "description": "Verifiable medication dosage calculator and tutor; deterministic engine, read-back, audit records, Zero Trust.",
+      "category": "productivity",
+      "keywords": ["dosage", "nursing", "pharmacy", "medication safety", "auditable"]
+    }
+  ]
+}

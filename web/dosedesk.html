@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DoseDesk — auditable medication calculation</title>
+<style>
+  :root{
+    --paper:#eef1ee; --panel:#ffffff; --ink:#151b1d; --muted:#5c655f; --line:#d5dbd5;
+    --record-bg:#161d21; --record-ink:#e9efe9; --record-dim:#7f948a; --record-line:#2c373b;
+    --verified:#1b7a50; --verified-bg:#e4f1ea; --verified-line:#a9d6c0;
+    --review:#8f6300; --review-bg:#faf0d6; --review-line:#e6cd8a;
+    --halt:#b12318; --halt-bg:#fbe8e6; --halt-line:#f0bcb6;
+    --accent:#0d6a56; --accent-ink:#ffffff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --radius:9px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;padding:0 20px}
+  .wrap{max-width:820px;margin:0 auto;padding:34px 0 60px}
+  a{color:var(--accent)}
+
+  /* masthead */
+  .mast{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;
+    border-bottom:2px solid var(--ink);padding-bottom:14px}
+  .brand h1{font-size:27px;margin:0;letter-spacing:-.02em;font-weight:750}
+  .brand .tag{color:var(--muted);font-size:13.5px;margin-top:3px;max-width:46ch}
+  .brand .zt{margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--muted);
+    display:flex;align-items:center;gap:7px}
+  .zt .dot{width:7px;height:7px;border-radius:50%;background:var(--verified)}
+
+  /* parity stamp — the signature */
+  .stamp{flex:none;font-family:var(--mono);font-size:11px;border:1.5px solid var(--verified);
+    color:var(--verified);background:var(--verified-bg);border-radius:7px;padding:9px 11px;
+    max-width:210px;transform:rotate(.4deg)}
+  .stamp.bad{border-color:var(--halt);color:var(--halt);background:var(--halt-bg)}
+  .stamp .hd{font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+  .stamp .sub{color:var(--muted);margin-top:4px;line-height:1.35}
+  .stamp .tick{font-size:13px}
+
+  .section-label{font-family:var(--mono);font-size:11px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--muted);margin:30px 0 12px}
+
+  /* mode cards */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mode{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px 16px;cursor:pointer;text-align:left;font:inherit;color:inherit;transition:.12s}
+  .mode:hover{border-color:var(--accent)}
+  .mode[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .mode .mt{font-weight:680;font-size:15px}
+  .mode .md{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .mode .mmeta{font-family:var(--mono);font-size:10.5px;color:var(--accent);margin-top:9px;
+    letter-spacing:.03em}
+
+  /* scenarios */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font:inherit;font-size:12.5px;background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;padding:6px 13px;cursor:pointer;color:inherit}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .chip .k{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:6px}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:0;margin-top:14px;overflow:hidden}
+  .panel .phd{padding:11px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center}
+  .panel .pbody{padding:16px}
+
+  /* parsed order / read-back */
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:2px 14px;font-size:14px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;font-family:var(--mono)}
+  .banner{border-radius:8px;padding:10px 12px;font-size:13px;margin-top:14px;
+    border:1px solid transparent}
+  .banner.review{background:var(--review-bg);border-color:var(--review-line);color:#5f4300}
+  .banner.halt{background:var(--halt-bg);border-color:var(--halt-line);color:#7d1a12}
+  .banner b{font-weight:700}
+  .actions{margin-top:15px;display:flex;gap:9px;flex-wrap:wrap}
+  .btn{font:inherit;font-size:13.5px;font-weight:620;border-radius:8px;padding:9px 15px;
+    cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+  .btn.ghost{background:transparent;color:var(--accent)}
+  .btn.warn{border-color:var(--review);background:var(--review);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* THE RECORD — instrument surface */
+  .record{background:var(--record-bg);color:var(--record-ink);border-radius:var(--radius);
+    margin-top:14px;font-family:var(--mono);font-size:13px;overflow:hidden}
+  .record .rhd{padding:12px 16px;border-bottom:1px solid var(--record-line);
+    display:flex;justify-content:space-between;align-items:center;letter-spacing:.08em;
+    font-size:11px;color:var(--record-dim);text-transform:uppercase}
+  .record .rbody{padding:16px}
+  .rrow{display:grid;grid-template-columns:120px 1fr;gap:3px 14px;padding:6px 0;
+    border-bottom:1px dashed var(--record-line)}
+  .rrow:last-child{border-bottom:0}
+  .rrow .rk{color:var(--record-dim)}
+  .cancel{white-space:pre-wrap;color:#bfe6d3;line-height:1.7}
+  .big{font-size:22px;font-weight:600}
+  .exact{color:var(--record-dim);font-size:12px}
+  .pill{display:inline-block;font-size:10.5px;letter-spacing:.06em;padding:2px 8px;border-radius:999px;
+    text-transform:uppercase;font-weight:700}
+  .pill.NORMAL{background:var(--verified-bg);color:var(--verified)}
+  .pill.HIGH_REVIEW{background:var(--halt-bg);color:var(--halt)}
+  .pill.REVIEW{background:var(--review-bg);color:var(--review)}
+  .pill.UNKNOWN{background:#2a3439;color:var(--record-dim)}
+  .rwarn{color:#ffcaa6}
+  .conf{color:var(--record-dim);font-size:11px;margin-top:2px}
+
+  /* practice */
+  .prac input{font:inherit;font-family:var(--mono);font-size:15px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:7px;width:120px;margin-right:8px}
+  .verdict{margin-top:12px;font-size:14px}
+  .verdict.ok{color:var(--verified)} .verdict.no{color:var(--halt)}
+
+  footer{margin-top:38px;border-top:1px solid var(--line);padding-top:16px;
+    color:var(--muted);font-size:12px}
+  footer .scope{font-size:11.5px;line-height:1.6}
+  .hide{display:none}
+  @media(max-width:620px){.modes{grid-template-columns:1fr}.kv,.rrow{grid-template-columns:100px 1fr}
+    .mast{flex-direction:column}.stamp{transform:none}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="brand">
+      <h1>DoseDesk</h1>
+      <div class="tag">Auditable medication calculation. It reads your order back, shows every unit cancel, and proves its own arithmetic before you trust a number.</div>
+      <div class="zt"><span class="dot"></span> ZERO TRUST · runs locally · no network · nothing leaves this device</div>
+    </div>
+    <div id="stamp" class="stamp"><div class="hd"><span class="tick">◵</span> VERIFYING…</div><div class="sub">checking engine against plugin vectors</div></div>
+  </header>
+
+  <div class="section-label">Choose a mode</div>
+  <div class="modes">
+    <button class="mode" id="mode-verify" aria-pressed="true" onclick="setMode('verify')">
+      <div class="mt">Verify a calculation</div>
+      <div class="md">A real order. Strict: no assumed values, read-back required, audit record out.</div>
+      <div class="mmeta">→ deterministic engine</div>
+    </button>
+    <button class="mode" id="mode-practice" aria-pressed="false" onclick="setMode('practice')">
+      <div class="mt">Practice medication math</div>
+      <div class="md">Drill the patterns. Example values are fine here; the engine grades and shows the steps.</div>
+      <div class="mmeta">→ tutor mode</div>
+    </button>
+  </div>
+
+  <!-- VERIFY -->
+  <section id="verify">
+    <div class="section-label">Load a demo order</div>
+    <div class="chips" id="scenario-chips"></div>
+    <div id="verify-stage"></div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="practice" class="hide">
+    <div class="section-label">Practice · tablet dosing</div>
+    <div class="panel"><div class="pbody prac">
+      <div id="prac-q" style="font-size:15px">Press generate for a problem.</div>
+      <div id="prac-input" class="hide" style="margin-top:12px">
+        <input id="prac-ans" type="text" inputmode="decimal" placeholder="tablets" />
+        <button class="btn" onclick="checkPractice()">Check my answer</button>
+      </div>
+      <div id="prac-verdict"></div>
+      <div class="actions"><button class="btn ghost" onclick="genPractice()">Generate a problem</button></div>
+    </div></div>
+  </section>
+
+  <footer>
+    <div class="scope">
+      <b>Scope.</b> DoseDesk supports and documents a calculation; it does not replace clinical judgment and
+      must not be the sole basis for administering a medication. Values come from the user and public labeling
+      and must be verified against current institutional policy, the prescriber's order, and the product label.
+      No regulatory-status claim is made or implied.
+    </div>
+    <div style="margin-top:10px">Browser demo of the DoseDesk plugin · the inlined engine is the same source proven against the Python engine of record · MIT · part of the AbstractionDesk tool family.</div>
+  </footer>
+</div>
+
+<script>
+/*
+ * DoseDesk portable engine (JavaScript port of dosedesk_engine.py).
+ *
+ * Exact arithmetic via BigInt rationals — NO floating point in the math path, NO
+ * external library, NO network. Same contract as the Python engine of record:
+ * units must cancel, every calc returns a structured audit record, guardrails fire
+ * in code. This file is the single JS source; dosedesk.html inlines it verbatim.
+ *
+ * Because a browser cannot run the Python engine, this is necessarily a second
+ * implementation. Its correctness is not asserted — it is PROVEN against golden
+ * vectors emitted by the Python engine (see parity_vectors.json / the self-test).
+ */
+(function (root) {
+  "use strict";
+  const ENGINE_VERSION = "0.1.0";
+
+  // ---- BigInt rational ----------------------------------------------------
+  function bgcd(a, b) { a = a < 0n ? -a : a; b = b < 0n ? -b : b; while (b) { [a, b] = [b, a % b]; } return a; }
+  class Frac {
+    constructor(n, d = 1n) {
+      n = BigInt(n); d = BigInt(d);
+      if (d === 0n) throw new Error("zero denominator");
+      if (d < 0n) { n = -n; d = -d; }
+      const g = bgcd(n, d) || 1n;
+      this.n = n / g; this.d = d / g;
+    }
+    static from(x) {
+      if (x instanceof Frac) return x;
+      const s = String(x).trim();
+      if (s.includes("/")) { const [a, b] = s.split("/"); return new Frac(BigInt(a), BigInt(b)); }
+      if (s.includes(".") || s.includes("e") || s.includes("E")) {
+        // exact decimal parse (no float): "1.6" -> 16/10
+        const neg = s.startsWith("-"); const t = neg ? s.slice(1) : s;
+        const [intp, frac = ""] = t.split(".");
+        const denom = 10n ** BigInt(frac.length);
+        const num = BigInt((intp || "0") + frac);
+        return new Frac(neg ? -num : num, denom);
+      }
+      return new Frac(BigInt(s), 1n);
+    }
+    mul(o) { o = Frac.from(o); return new Frac(this.n * o.n, this.d * o.d); }
+    div(o) { o = Frac.from(o); return new Frac(this.n * o.d, this.d * o.n); }
+    add(o) { o = Frac.from(o); return new Frac(this.n * o.d + o.n * this.d, this.d * o.d); }
+    sub(o) { o = Frac.from(o); return new Frac(this.n * o.d - o.n * this.d, this.d * o.d); }
+    cmp(o) { o = Frac.from(o); const l = this.n * o.d, r = o.n * this.d; return l < r ? -1 : l > r ? 1 : 0; }
+    toString() { return this.d === 1n ? this.n.toString() : `${this.n}/${this.d}`; }
+    toNumber() { return Number(this.n) / Number(this.d); } // DISPLAY ONLY
+  }
+
+  // ---- units --------------------------------------------------------------
+  const F = (n, d) => new Frac(n, d);
+  const U = {
+    mcg: ["MASS", F(1n, 1000n)], ug: ["MASS", F(1n, 1000n)], mg: ["MASS", F(1n)], g: ["MASS", F(1000n)],
+    kg: ["WT", F(1n)], lb: ["WT", F(45359237n, 100000000n)],
+    mL: ["VOL", F(1n)], L: ["VOL", F(1000n)],
+    min: ["TIME", F(1n)], hr: ["TIME", F(60n)], h: ["TIME", F(60n)], sec: ["TIME", F(1n, 60n)],
+    mEq: ["MEQ", F(1n)], mmol: ["MMOL", F(1n)], unit: ["UNIT", F(1n)], units: ["UNIT", F(1n)],
+    tab: ["TAB", F(1n)], cap: ["TAB", F(1n)], gtt: ["DROP", F(1n)],
+  };
+  class Qty {
+    constructor(value, dims) { this.value = Frac.from(value); this.dims = dims || {}; }
+    static norm(d) { const o = {}; for (const k in d) if (d[k] !== 0) o[k] = d[k]; return o; }
+    mul(o) { const d = Object.assign({}, this.dims); for (const k in o.dims) d[k] = (d[k] || 0) + o.dims[k]; return new Qty(this.value.mul(o.value), Qty.norm(d)); }
+    div(o) { const d = Object.assign({}, this.dims); for (const k in o.dims) d[k] = (d[k] || 0) - o.dims[k]; return new Qty(this.value.div(o.value), Qty.norm(d)); }
+  }
+  function parseUnit(u) {
+    const parts = String(u).split("/");
+    let r = new Qty(F(1n), {});
+    parts.forEach((tokRaw, i) => {
+      const tok = tokRaw.trim();
+      if (!(tok in U)) throw new Error(`unknown unit token: ${tok} in ${u}`);
+      const [dim, factor] = U[tok];
+      const q = new Qty(factor, { [dim]: 1 });
+      r = i === 0 ? r.mul(q) : r.div(q);
+    });
+    return r;
+  }
+  function qty(mag, unit) { const uq = parseUnit(unit); return new Qty(Frac.from(mag).mul(uq.value), uq.dims); }
+
+  // ---- rounding (single terminal step) ------------------------------------
+  function roundHalfUp(value, places) {
+    const scale = new Frac(10n ** BigInt(places), 1n);
+    const scaled = value.mul(scale);
+    // floor for non-negative
+    let floor = scaled.n / scaled.d; // BigInt truncation toward zero (values are >= 0 here)
+    const rem = scaled.sub(new Frac(floor, 1n));
+    if (rem.cmp(F(1n, 2n)) >= 0) floor = floor + 1n;
+    return new Frac(floor, 1n).div(scale);
+  }
+  const ROUNDING = {
+    whole: (v) => roundHalfUp(v, 0),
+    tenth: (v) => roundHalfUp(v, 1),
+    hundredth: (v) => roundHalfUp(v, 2),
+    half_tab: (v) => roundHalfUp(v.mul(2), 0).div(2),
+    none: (v) => v,
+  };
+  function applyRounding(v, rule) { if (!(rule in ROUNDING)) throw new Error("unknown rounding rule: " + rule); return ROUNDING[rule](v); }
+
+  function result(calc, inputs, formula, steps, exact, targetUnit, rounding, warnings, flags) {
+    const target = parseUnit(targetUnit);
+    const displayExact = exact.div(target.value);
+    const rounded = applyRounding(displayExact, rounding);
+    return {
+      calc, inputs, formula, steps,
+      exact_value: displayExact.toString(), exact_float: displayExact.toNumber(),
+      rounding_rule: rounding, result_value: rounded.toNumber(), result_unit: targetUnit,
+      warnings: warnings || [], flags: flags || [], engine_version: ENGINE_VERSION,
+    };
+  }
+  function resultScalar(calc, inputs, formula, steps, val, unit, rounding) {
+    const rounded = applyRounding(val, rounding);
+    return { calc, inputs, formula, steps, exact_value: val.toString(), exact_float: val.toNumber(),
+      rounding_rule: rounding, result_value: rounded.toNumber(), result_unit: unit, warnings: [], flags: [], engine_version: ENGINE_VERSION };
+  }
+
+  // ---- safety detectors ---------------------------------------------------
+  const ABBREV = [
+    [/(?<![A-Za-z])[uU](?![A-Za-z])/, "'u'/'U' for units is error-prone (mistaken for 0/4/cc) — a top insulin-error source. Write 'unit'."],
+    [/\bIU\b/, "'IU' is error-prone (mistaken for IV/10). Write 'unit'."],
+    [/\bcc\b/, "'cc' is error-prone (mistaken for U/00). Write 'mL'."],
+    [/µg|ug\b/, "'µg'/'ug' is error-prone (mistaken for mg). Write 'mcg'."],
+    [/\d+\.0*\b(?=\s*(mg|mcg|g|mL|unit))/, "Trailing zero after a decimal is error-prone (10x risk). Drop it."],
+    [/(?<![\d.])\.\d/, "Naked decimal (no leading zero) is error-prone (10x risk). Write '0.x'."],
+  ];
+  function checkErrorProne(raw) { const w = []; for (const [p, m] of ABBREV) if (p.test(raw)) w.push(m); return w; }
+  const HEDGE = /\b(probably|approximately|approx|about|around|roughly|guess|guessing|estimate|estimated|somewhere|maybe|ish|or so|give or take)\b|~\s*\d|\d\s*ish\b/i;
+  function checkUncertainInputs(raw) {
+    return HEDGE.test(raw) ? ["Input contains an approximate/hedged value. A medication calculation requires exact ordered values — do not calculate on an estimate; request the actual figure."] : [];
+  }
+
+  // ---- calculators (mirror python) ----------------------------------------
+  function solidLiquidDose(orderedMg, availMg, perUnit = "tab", rounding = "half_tab") {
+    const ordered = qty(orderedMg, "mg"), strength = qty(availMg, `mg/${perUnit}`);
+    const r = ordered.div(strength);
+    const steps = [`ordered ${orderedMg} mg / strength ${availMg} mg per ${perUnit}`, `units: mg / (mg/${perUnit}) = ${perUnit}`, `exact = ${r.value} ${perUnit}`];
+    return result("solid_liquid_dose", { ordered: `${orderedMg} mg`, available: `${availMg} mg/${perUnit}` }, "result = ordered / available_strength", steps, r.value, perUnit, rounding);
+  }
+  function infusionRate(weightKg, dose, doseUnit, concMass, concMassUnit, concVolMl, rounding = "tenth", pumpMaxMlHr = null) {
+    const doseQ = qty(dose, doseUnit);
+    const perKg = doseUnit.split("/").includes("kg");
+    const weighted = perKg ? doseQ.mul(qty(weightKg, "kg")) : doseQ;
+    const conc = qty(concMass, concMassUnit).div(qty(concVolMl, "mL"));
+    const volRate = weighted.div(conc);
+    const mlPerHr = volRate.value.mul(60);
+    const flags = [];
+    if (mlPerHr.cmp(F(0n)) > 0) {
+      const minutesToEmpty = qty(concVolMl, "mL").value.div(volRate.value);
+      if (minutesToEmpty.cmp(F(5n)) < 0) flags.push(`IMPLAUSIBLE: bag empties in ~${minutesToEmpty.toNumber().toFixed(1)} min — verify order/concentration.`);
+    }
+    if (pumpMaxMlHr !== null && mlPerHr.cmp(Frac.from(pumpMaxMlHr)) > 0) flags.push(`RATE EXCEEDS PUMP MAX (${pumpMaxMlHr} mL/hr) — verify pump/setup.`);
+    const steps = [`dose ${dose} ${doseUnit}${perKg ? ` x weight ${weightKg} kg` : ""}`, `concentration = ${concMass} ${concMassUnit} / ${concVolMl} mL = ${conc.value} (canonical mg/mL)`, `rate = (mass/time) / concentration -> volume/time`, `exact = ${mlPerHr} mL/hr (before rounding)`];
+    return result("infusion_rate", { weight: `${weightKg} kg`, dose: `${dose} ${doseUnit}`, concentration: `${concMass} ${concMassUnit}/${concVolMl} mL` }, "rate = (dose x weight) / concentration", steps, volRate.value, "mL/hr", rounding, [], flags);
+  }
+  function doseFromRate(weightKg, mlPerHr, concMass, concMassUnit, concVolMl, targetDoseUnit = "mcg/kg/min", rounding = "tenth") {
+    const rate = qty(mlPerHr, "mL/hr");
+    const conc = qty(concMass, concMassUnit).div(qty(concVolMl, "mL"));
+    const massPerTime = rate.mul(conc);
+    const perKg = targetDoseUnit.split("/").includes("kg");
+    const dose = perKg ? massPerTime.div(qty(weightKg, "kg")) : massPerTime;
+    const steps = [`rate ${mlPerHr} mL/hr x concentration ${concMass} ${concMassUnit}/${concVolMl} mL`, `${perKg ? `/ weight ${weightKg} kg ` : ""}-> ${targetDoseUnit}`];
+    return result("dose_from_rate", { weight: `${weightKg} kg`, rate: `${mlPerHr} mL/hr`, concentration: `${concMass} ${concMassUnit}/${concVolMl} mL` }, "dose = (rate x concentration) / weight", steps, dose.value, targetDoseUnit, rounding);
+  }
+  function reconstitution(vialAmt, vialUnit, diluentMl, ordered, orderedUnit, rounding = "tenth") {
+    const finalConc = qty(vialAmt, vialUnit).div(qty(diluentMl, "mL"));
+    const draw = qty(ordered, orderedUnit).div(finalConc);
+    const steps = [`final concentration = ${vialAmt} ${vialUnit} / ${diluentMl} mL = ${finalConc.value} (canonical mg/mL)`, `draw = ordered ${ordered} ${orderedUnit} / final concentration -> mL`, `exact = ${draw.value} mL`];
+    return result("reconstitution", { vial: `${vialAmt} ${vialUnit}`, diluent: `${diluentMl} mL`, ordered: `${ordered} ${orderedUnit}` }, "draw = ordered / (vial_amount / diluent_volume)", steps, draw.value, "mL", rounding);
+  }
+  function dripRate(volumeMl, timeVal, timeUnit, dropFactor, rounding = "whole") {
+    const flow = qty(volumeMl, "mL").div(qty(timeVal, timeUnit));
+    const gtt = flow.mul(qty(dropFactor, "gtt/mL"));
+    const steps = [`flow = ${volumeMl} mL / ${timeVal} ${timeUnit}`, `x drop factor ${dropFactor} gtt/mL -> gtt/min`, `exact = ${gtt.value} gtt/min (before rounding to whole drops)`];
+    return result("drip_rate", { volume: `${volumeMl} mL`, time: `${timeVal} ${timeUnit}`, drop_factor: `${dropFactor} gtt/mL` }, "gtt/min = (volume / time) x drop_factor", steps, gtt.value, "gtt/min", rounding);
+  }
+  function percentToMgMl(percent) {
+    const conc = qty(Frac.from(percent).mul(1000).toString(), "mg").div(qty(100, "mL"));
+    return result("percent_to_mg_ml", { percent: `${percent}%` }, "mg/mL = percent x 10", [`${percent}% w/v = ${percent} g / 100 mL`], conc.value, "mg/mL", "none");
+  }
+  function ratioToMgMl(numG, denMl) {
+    const conc = qty(Frac.from(numG).mul(1000).toString(), "mg").div(qty(denMl, "mL"));
+    return result("ratio_to_mg_ml", { ratio: `${numG} g : ${denMl} mL` }, "mg/mL = grams x 1000 / mL", [`1:${denMl} (g:mL) = ${numG} g / ${denMl} mL`], conc.value, "mg/mL", "none");
+  }
+  function crclCockcroftGault(age, weightKg, scr, female = false, rounding = "whole") {
+    let val = Frac.from(140 - age).mul(Frac.from(weightKg)).div(Frac.from(72).mul(Frac.from(scr)));
+    if (female) val = val.mul(F(85n, 100n));
+    return resultScalar("crcl_cockcroft_gault", { age, weight: `${weightKg} kg`, scr: `${scr} mg/dL`, female }, "Cockcroft-Gault", [`((140 - ${age}) x ${weightKg}) / (72 x ${scr})${female ? " x 0.85 (female)" : ""}`], val, "mL/min", rounding);
+  }
+  function enforcePediatricCap(computedMg, adultMaxMg, drug = "") {
+    if (Frac.from(computedMg).cmp(Frac.from(adultMaxMg)) > 0)
+      throw { name: "DoseSafetyHalt", message: `HALT: computed pediatric dose ${computedMg} mg exceeds adult max ${adultMaxMg} mg${drug ? " for " + drug : ""}. Recheck weight and order.` };
+  }
+
+  // ---- plausibility (seed ranges inline; mirror provenance json) -----------
+  const RANGES = [
+    { id: "dopamine.mcg_kg_min.adult", drug: "dopamine", parameter: "mcg/kg/min", range_type: "therapeutic_reference", lower: "2", upper: "20", population: "adult", source: "commonly cited educational reference range", source_version: "2026.07-seed", confidence: "educational-reference" },
+    { id: "norepinephrine.mcg_min.adult", drug: "norepinephrine", parameter: "mcg/min", range_type: "usual_starting", lower: "2", upper: "", population: "adult", source: "commonly cited educational reference range", source_version: "2026.07-seed", confidence: "educational-reference" },
+  ];
+  function plausibilityAssess(drug, parameter, value, population = "adult") {
+    const dl = (drug || "").trim().toLowerCase();
+    const m = RANGES.find((r) => r.drug.toLowerCase() === dl && r.parameter === parameter && (r.population === population || r.population === "all"));
+    if (!m) return { level: "UNKNOWN", message: `No sourced reference range on file for ${drug} (${parameter}, ${population}). Plausibility not assessed — verify against institutional policy and the label.`, confidence: "unknown", matched_range_id: null, source: null, source_version: null };
+    const v = Frac.from(value);
+    const lo = m.lower !== "" ? Frac.from(m.lower) : null, hi = m.upper !== "" ? Frac.from(m.upper) : null;
+    const within = (lo === null || v.cmp(lo) >= 0) && (hi === null || v.cmp(hi) <= 0);
+    const level = within ? "NORMAL" : "HIGH_REVIEW";
+    const msg = within
+      ? `${value} ${parameter} is within the ${m.range_type.replace(/_/g, " ")} of ${m.lower || "-inf"}-${m.upper || "inf"} for ${population}. Still confirm patient-specific factors.`
+      : `${value} ${parameter} is OUTSIDE the referenced ${m.lower || "-inf"}-${m.upper || "inf"} for ${population}. This is a prompt to VERIFY concentration, weight, and intended order — not a statement that the order is wrong.`;
+    return { level, message: msg, confidence: m.confidence, matched_range_id: m.id, source: m.source, source_version: m.source_version };
+  }
+
+  const api = {
+    ENGINE_VERSION, Frac, qty, parseUnit, applyRounding,
+    solidLiquidDose, infusionRate, doseFromRate, reconstitution, dripRate,
+    percentToMgMl, ratioToMgMl, crclCockcroftGault, enforcePediatricCap,
+    checkErrorProne, checkUncertainInputs, plausibilityAssess,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.DoseDesk = api;
+})(typeof window !== "undefined" ? window : this);
+
+const PARITY = {
+  "_meta": {
+    "generated_from": "python engine of record",
+    "engine_version": "0.1.0",
+    "note": "The browser JS engine must reproduce every exact_value and result_value below. Parity is proven, not asserted."
+  },
+  "vectors": [
+    {
+      "calc": "solid_liquid_dose",
+      "args": [
+        750,
+        250,
+        "tab",
+        "half_tab"
+      ],
+      "exact_value": "3",
+      "result_value": 3.0,
+      "result_unit": "tab"
+    },
+    {
+      "calc": "infusion_rate",
+      "args": [
+        62,
+        5,
+        "mcg/kg/min",
+        400,
+        "mg",
+        250
+      ],
+      "exact_value": "93/8",
+      "result_value": 11.6,
+      "result_unit": "mL/hr"
+    },
+    {
+      "calc": "dose_from_rate",
+      "args": [
+        62,
+        11.625,
+        400,
+        "mg",
+        250,
+        "mcg/kg/min",
+        "none"
+      ],
+      "exact_value": "5",
+      "result_value": 5.0,
+      "result_unit": "mcg/kg/min"
+    },
+    {
+      "calc": "reconstitution",
+      "args": [
+        1,
+        "g",
+        10,
+        400,
+        "mg"
+      ],
+      "exact_value": "4",
+      "result_value": 4.0,
+      "result_unit": "mL"
+    },
+    {
+      "calc": "drip_rate",
+      "args": [
+        1000,
+        8,
+        "hr",
+        15
+      ],
+      "exact_value": "125/4",
+      "result_value": 31.0,
+      "result_unit": "gtt/min"
+    },
+    {
+      "calc": "percent_to_mg_ml",
+      "args": [
+        2
+      ],
+      "exact_value": "20",
+      "result_value": 20.0,
+      "result_unit": "mg/mL"
+    },
+    {
+      "calc": "ratio_to_mg_ml",
+      "args": [
+        1,
+        1000
+      ],
+      "exact_value": "1",
+      "result_value": 1.0,
+      "result_unit": "mg/mL"
+    },
+    {
+      "calc": "crcl_cockcroft_gault",
+      "args": [
+        70,
+        70,
+        1.0,
+        false
+      ],
+      "exact_value": "1225/18",
+      "result_value": 68.0,
+      "result_unit": "mL/min"
+    }
+  ]
+};
+const D = window.DoseDesk;
+
+/* ---------- self-test: prove the inlined engine matches the plugin ---------- */
+const DISPATCH = {
+  solid_liquid_dose:D.solidLiquidDose, infusion_rate:D.infusionRate, dose_from_rate:D.doseFromRate,
+  reconstitution:D.reconstitution, drip_rate:D.dripRate, percent_to_mg_ml:D.percentToMgMl,
+  ratio_to_mg_ml:D.ratioToMgMl, crcl_cockcroft_gault:D.crclCockcroftGault,
+};
+function runSelfTest(){
+  let pass=0, total=0, firstFail=null;
+  for(const v of (PARITY?PARITY.vectors:[])){
+    total++;
+    try{
+      const r = DISPATCH[v.calc].apply(null, v.args);
+      if(r.exact_value===v.exact_value && Math.abs(r.result_value-v.result_value)<1e-9) pass++;
+      else if(!firstFail) firstFail=v.calc;
+    }catch(e){ if(!firstFail) firstFail=v.calc; }
+  }
+  const el=document.getElementById('stamp');
+  if(pass===total && total>0){
+    el.className='stamp';
+    el.innerHTML=`<div class="hd"><span class="tick">✓</span> ENGINE VERIFIED</div>`+
+      `<div class="sub">${pass}/${total} calculations match the plugin engine of record (v${D.ENGINE_VERSION}). Exact rational parity.</div>`;
+  }else{
+    el.className='stamp bad';
+    el.innerHTML=`<div class="hd"><span class="tick">✕</span> ENGINE MISMATCH</div>`+
+      `<div class="sub">${pass}/${total} match — first divergence: ${firstFail||'?'}. Do not trust results.</div>`;
+  }
+}
+
+/* ---------- demo scenarios ---------- */
+const HIGH_ALERT = ["heparin","insulin","potassium chloride","norepinephrine","epinephrine","dopamine"];
+const SCENARIOS = {
+  dopamine:{
+    label:"Dopamine drip", key:"plausibility",
+    order:{Drug:"Dopamine", Order:"5 mcg/kg/min", Weight:"62 kg", Concentration:"400 mg / 250 mL", Route:"IV infusion"},
+    raw:"dopamine 5 mcg/kg/min, 62 kg, 400 mg/250 mL",
+    run:()=>{const r=D.infusionRate(62,5,"mcg/kg/min",400,"mg",250);
+      r._plaus=D.plausibilityAssess("dopamine","mcg/kg/min",5,"adult"); return r;}
+  },
+  heparin:{
+    label:"Heparin infusion", key:"high-alert",
+    order:{Drug:"Heparin", Order:"18 units/kg/hr", Weight:"80 kg", Concentration:"25,000 units / 500 mL", Route:"IV infusion"},
+    raw:"heparin 18 units/kg/hr, 80 kg, 25000 units/500 mL",
+    run:()=>D.infusionRate(80,18,"unit/kg/hr",25000,"unit",500)
+  },
+  insulin:{
+    label:"Insulin order", key:"notation guard",
+    order:{Drug:"Regular insulin", Order:"5u subcut", Concentration:"U-100 (100 units/mL)"},
+    raw:"Give 5u regular insulin",
+    stopOnNotation:true,
+    run:()=>{const r=D.solidLiquidDose(5,100,"mL","hundredth"); r._note="Calculated only after 'u' was confirmed as 'units'."; return r;}
+  },
+  peds:{
+    label:"Pediatric liquid", key:"student",
+    order:{Drug:"Acetaminophen susp.", Order:"250 mg PO", Available:"125 mg / 5 mL"},
+    raw:"acetaminophen 250 mg, available 125 mg/5 mL",
+    run:()=>D.reconstitution(125,"mg",5,250,"mg")
+  },
+};
+
+function renderChips(){
+  const c=document.getElementById('scenario-chips'); c.innerHTML="";
+  for(const id in SCENARIOS){const s=SCENARIOS[id];
+    const b=document.createElement('button'); b.className="chip";
+    b.innerHTML=`${s.label}<span class="k">${s.key}</span>`; b.onclick=()=>loadScenario(id);
+    c.appendChild(b);}
+}
+
+let current=null, notationResolved=false;
+function loadScenario(id){ current=id; notationResolved=false; renderStage(); }
+
+function renderStage(){
+  const s=SCENARIOS[current]; const stage=document.getElementById('verify-stage');
+  const abbrev=D.checkErrorProne(s.raw); const hedge=D.checkUncertainInputs(s.raw);
+  const isHighAlert=HIGH_ALERT.includes((s.order.Drug||"").toLowerCase().replace(/ susp\.| \(.*/,'').replace('regular ',''));
+  let banners="";
+  if(abbrev.length && !notationResolved)
+    banners+=`<div class="banner review"><b>Notation check.</b> ${abbrev[0]} Calculation is held until this is confirmed.</div>`;
+  if(hedge.length)
+    banners+=`<div class="banner halt"><b>Estimate rejected.</b> ${hedge[0]}</div>`;
+  if(isHighAlert)
+    banners+=`<div class="banner review"><b>High-alert medication.</b> Recommend an independent double-check: have a second clinician enter their inputs and confirm the results match.</div>`;
+
+  const rows=Object.entries(s.order).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
+  const held=(abbrev.length && !notationResolved);
+  let actions;
+  if(held){
+    actions=`<button class="btn warn" onclick="resolveNotation()">Confirm 'u' means units</button>`;
+  }else{
+    actions=`<button class="btn" onclick="confirmAndRun()">Confirm these values &amp; calculate</button>
+             <button class="btn ghost" onclick="renderStage()">Reset</button>`;
+  }
+  stage.innerHTML=`
+    <div class="panel">
+      <div class="phd"><span>Order received — read-back</span><span>${current}</span></div>
+      <div class="pbody">
+        <dl class="kv">${rows}</dl>
+        ${banners}
+        <div class="actions">${actions}</div>
+      </div>
+    </div>
+    <div id="record-slot"></div>`;
+}
+function resolveNotation(){ notationResolved=true; renderStage(); }
+
+function confirmAndRun(){
+  const s=SCENARIOS[current]; let r;
+  try{ r=s.run(); }catch(e){ document.getElementById('record-slot').innerHTML=
+    `<div class="record"><div class="rbody rwarn">HALT — ${e.message||e}</div></div>`; return; }
+  renderRecord(r);
+}
+
+function renderRecord(r){
+  const cancel=r.steps.join("\n");
+  const plaus=r._plaus;
+  let plausHtml="";
+  if(plaus){
+    plausHtml=`<div class="rrow"><div class="rk">Plausibility</div><div>
+      <span class="pill ${plaus.level}">${plaus.level}</span>
+      <div class="conf" style="margin-top:6px">${plaus.message}</div>
+      <div class="conf">confidence: ${plaus.confidence}${plaus.source?` · ${plaus.source}`:''}</div></div></div>`;
+  }
+  const warns=(r.flags&&r.flags.length? r.flags:[]).concat(r.warnings||[]);
+  const warnHtml = warns.length
+    ? `<div class="rrow"><div class="rk">Warnings</div><div class="rwarn">${warns.join('<br>')}</div></div>`
+    : `<div class="rrow"><div class="rk">Warnings</div><div>none</div></div>`;
+  document.getElementById('record-slot').innerHTML=`
+    <div class="record">
+      <div class="rhd"><span>Calculation record</span><span>DoseDesk v${r.engine_version}</span></div>
+      <div class="rbody">
+        <div class="rrow"><div class="rk">Formula</div><div>${r.formula}</div></div>
+        <div class="rrow"><div class="rk">Unit trace</div><div class="cancel">${cancel}</div></div>
+        <div class="rrow"><div class="rk">Result</div><div>
+          <div class="big">${r.result_value} ${r.result_unit}</div>
+          <div class="exact">exact ${r.exact_value} · rounding: ${r.rounding_rule}</div>
+        </div></div>
+        ${plausHtml}
+        ${warnHtml}
+        ${r._note?`<div class="rrow"><div class="rk">Note</div><div class="conf">${r._note}</div></div>`:''}
+      </div>
+    </div>`;
+}
+
+/* ---------- practice mode ---------- */
+let prac=null;
+function genPractice(){
+  const strengths=[25,50,100,125,250,500]; const st=strengths[Math.floor(Math.random()*strengths.length)];
+  const tabs=[0.5,1,1.5,2,3][Math.floor(Math.random()*5)];
+  const ordered=st*tabs;
+  prac={st,ordered,tabs};
+  document.getElementById('prac-q').innerHTML=
+    `Ordered <b>${ordered} mg</b>. Available: <b>${st} mg</b> tablets. How many tablets?`;
+  document.getElementById('prac-input').classList.remove('hide');
+  document.getElementById('prac-ans').value=""; document.getElementById('prac-verdict').innerHTML="";
+}
+function checkPractice(){
+  if(!prac)return; const ans=parseFloat(document.getElementById('prac-ans').value);
+  const r=D.solidLiquidDose(prac.ordered,prac.st,"tab","half_tab");
+  const v=document.getElementById('prac-verdict');
+  if(Math.abs(ans-r.result_value)<1e-9){
+    v.className="verdict ok"; v.innerHTML=`✓ Correct — ${r.result_value} tablets.<br><span class="conf" style="color:var(--muted)">${r.steps.join(' · ')}</span>`;
+  }else{
+    v.className="verdict no";
+    v.innerHTML=`✕ Not quite. Correct is ${r.result_value} tablets.<br><span class="conf" style="color:var(--muted)">Desired ÷ Have × Qty = ${prac.ordered} ÷ ${prac.st} = ${r.exact_value}. Check whether you inverted the ratio.</span>`;
+  }
+}
+
+/* ---------- mode switch ---------- */
+function setMode(m){
+  document.getElementById('mode-verify').setAttribute('aria-pressed', m==='verify');
+  document.getElementById('mode-practice').setAttribute('aria-pressed', m==='practice');
+  document.getElementById('verify').classList.toggle('hide', m!=='verify');
+  document.getElementById('practice').classList.toggle('hide', m!=='practice');
+}
+
+runSelfTest(); renderChips();
+</script>
+</body>
+</html>
