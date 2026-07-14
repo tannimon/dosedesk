@@ -1,0 +1,18 @@
+<svg viewBox="0 0 1280 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DoseDesk — auditable medication dosage calculations">
+  <rect width="1280" height="340" fill="#161d21"/>
+  <text x="70" y="150" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="62" font-weight="700" letter-spacing="-1.5" fill="#e9efe9">DoseDesk</text>
+  <text x="72" y="192" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18" fill="#a7bcb0">Auditable medication dosage calculations — a Claude Code plugin.</text>
+  <text x="72" y="224" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7f948a">deterministic engine · read-back · unit cancellation · calculation records</text>
+  <circle cx="78" cy="259" r="4.5" fill="#2f9c6a"/>
+  <text x="92" y="264" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="12.5" letter-spacing="0.4" fill="#7f948a">ZERO TRUST — no network · no data egress</text>
+
+  <rect x="742" y="58" width="470" height="224" rx="12" fill="#1b2429" stroke="#2c373b"/>
+  <text x="768" y="97" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="12" letter-spacing="1.6" fill="#7f948a">CALCULATION RECORD</text>
+  <rect x="1092" y="79" width="96" height="26" rx="13" fill="#12261c" stroke="#2b6a4b"/>
+  <text x="1105" y="96" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="11.5" font-weight="700" fill="#4bbd86">&#10003; VERIFIED</text>
+  <line x1="768" y1="115" x2="1186" y2="115" stroke="#2c373b"/>
+  <text x="768" y="150" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="16" fill="#cfe0d6">5 mcg/kg/min  &#215;  62 kg</text>
+  <text x="768" y="178" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="16" fill="#cfe0d6">&#247;  ( 400 mg / 250 mL )</text>
+  <text x="768" y="240" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="34" font-weight="600" fill="#e9efe9">11.6 mL/hr</text>
+  <text x="978" y="240" font-family="ui-monospace,'SF Mono',Menlo,Consolas,monospace" font-size="14" fill="#7f948a">exact 93/8</text>
+</svg>
