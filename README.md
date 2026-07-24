@@ -123,4 +123,10 @@ use and are outside the tool's authority to assert.
 - **v0.3:** openFDA/DailyMed label-snapshot ingestion + version diffing.
 - **v0.4:** instructor mode — competency exams, class assignments, remediation.
 
+## Built by
+
+Tanni — clinical quality abstractor, vibe code hobbyist, and web design enthusiast. She loves her dog, Sawyer.
+
+Chief Morale Officer duties handled by Sawyer, who appears when you least expect him.
+
 MIT licensed. Part of the AbstractionDesk tool family.
